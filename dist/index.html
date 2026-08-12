@@ -445,7 +445,7 @@
     }
 
     /* ========================================================
-       ギャラリーフルビューア (モーダル) - スマホ領域最大化 & ボタン押しやすさ追求
+       ギャラリーフルビューア (モーダル) - 画像領域最大化 & クリーンデザイン
        ======================================================== */
     .viewer-overlay {
       position: fixed;
@@ -529,7 +529,7 @@
     .btn-circle:hover, .btn-circle:active { background: rgba(255, 255, 255, 0.3); scale: 1.05; }
     .btn-circle.active { background: var(--accent-violet); border-color: var(--accent-violet); }
 
-    /* モーダル閉じる（×）ボタン - スマホで100%タップ保証 */
+    /* モーダル閉じる（×）ボタン */
     .btn-close-main {
       background: #ef4444 !important;
       border: 2px solid #ffffff !important;
@@ -577,36 +577,8 @@
       will-change: transform;
       transform-origin: center center;
       transition: transform 0.1s ease-out;
-      cursor: grab;
-    }
-
-    .arrow-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(17, 24, 39, 0.6);
-      backdrop-filter: blur(10px);
-      border: 1px solid var(--border-light);
-      color: #fff;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       cursor: pointer;
-      transition: all 0.25s ease;
-      z-index: 20;
-      pointer-events: auto;
     }
-
-    .arrow-btn:hover, .arrow-btn:active {
-      background: var(--accent-violet);
-      scale: 1.08;
-    }
-
-    .arrow-btn.left { left: 0.75rem; }
-    .arrow-btn.right { right: 0.75rem; }
 
     /* 超シンプル型カウンターバッジ */
     .floating-counter {
@@ -630,8 +602,7 @@
 
     /* フォーカスモード (UI非表示時) */
     .viewer-overlay.ui-hidden .viewer-header,
-    .viewer-overlay.ui-hidden .floating-counter,
-    .viewer-overlay.ui-hidden .arrow-btn {
+    .viewer-overlay.ui-hidden .floating-counter {
       opacity: 0;
       pointer-events: none;
     }
@@ -662,13 +633,6 @@
       .custom-select {
         flex: 1;
       }
-      .arrow-btn {
-        width: 36px;
-        height: 36px;
-      }
-      .arrow-btn.left { left: 0.4rem; }
-      .arrow-btn.right { right: 0.4rem; }
-      
       .viewer-header {
         padding: 0.5rem 0.65rem;
       }
@@ -740,7 +704,7 @@
     </div>
   </main>
 
-  <!-- 全画面閲覧モーダル (一覧表示を削除・閉じるボタンを最優先配置) -->
+  <!-- 全画面閲覧モーダル (矢印ボタン完全廃止・画像全域タップで次へ/前へ) -->
   <div class="viewer-overlay" id="viewerOverlay">
     <div class="viewer-header">
       <div class="viewer-work-info">
@@ -765,15 +729,7 @@
 
     <div class="viewer-stage" id="viewerStage">
       <div class="stage-single" id="stageSingle">
-        <button class="arrow-btn left" id="btnPrev">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-
         <img src="" alt="" class="main-render-img" id="mainImg">
-
-        <button class="arrow-btn right" id="btnNext">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
       </div>
     </div>
 
@@ -818,8 +774,6 @@
 
     const stageSingleEl = document.getElementById('stageSingle');
     const mainImgEl = document.getElementById('mainImg');
-    const btnPrev = document.getElementById('btnPrev');
-    const btnNext = document.getElementById('btnNext');
     const counterTextEl = document.getElementById('counterText');
     const vCounterEl = document.getElementById('vCounter');
 
@@ -832,10 +786,13 @@
     let isDragging = false;
     let startX = 0;
     let startY = 0;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let hasMoved = false;
     let initialPinchDistance = 0;
     let initialScale = 1;
     let lastTapTime = 0;
-    let touchStartTime = 0;
+    let tapTimer = null;
 
     function init() {
       if (typeof GALLERY_DATA === 'undefined') return;
@@ -858,9 +815,6 @@
       btnSlideshow.addEventListener('click', (e) => { e.stopPropagation(); toggleSlideshow(); });
       btnFavModal.addEventListener('click', (e) => { e.stopPropagation(); toggleFavCurrentWork(); });
 
-      btnPrev.addEventListener('click', (e) => { e.stopPropagation(); prevImg(); });
-      btnNext.addEventListener('click', (e) => { e.stopPropagation(); nextImg(); });
-
       // キーボード操作
       window.addEventListener('keydown', (e) => {
         if (!overlayEl.classList.contains('active')) return;
@@ -873,7 +827,7 @@
         if (e.key === 'ArrowRight') nextImg();
       });
 
-      // URLハッシュの変更検知（直リンク・ブラウザの戻るボタン対応）
+      // URLハッシュの変更検知
       window.addEventListener('hashchange', parseUrlHash);
       window.addEventListener('popstate', parseUrlHash);
 
@@ -1027,7 +981,6 @@
       const folderName = decodeURIComponent(folderNameEncoded);
       let foundWork = null;
 
-      // 全作者データから検索
       for (const author of GALLERY_DATA) {
         const match = author.works.find(w => w.folderName === folderName);
         if (match) {
@@ -1049,7 +1002,6 @@
       overlayEl.classList.add('active');
       document.body.style.overflow = 'hidden';
 
-      // URLハッシュを更新 (各画像ごとの個別のパーマリンクURL)
       const targetHash = `#work=${encodeURIComponent(currentWork.folderName)}&img=${imgIdx + 1}`;
       if (location.hash !== targetHash) {
         isInternalHashChange = true;
@@ -1084,7 +1036,6 @@
         return;
       }
 
-      // パース: work=folderName&img=1
       const params = new URLSearchParams(hash);
       const workParam = params.get('work');
       const imgParam = parseInt(params.get('img') || '1', 10) - 1;
@@ -1100,7 +1051,6 @@
       mainImgEl.src = `${currentWork.path}/${currentWork.images[imgIdx]}`;
       counterTextEl.textContent = `${imgIdx + 1} / ${currentWork.images.length}`;
 
-      // URLハッシュを画像送り時に同期
       const targetHash = `#work=${encodeURIComponent(currentWork.folderName)}&img=${imgIdx + 1}`;
       if (location.hash !== targetHash && overlayEl.classList.contains('active')) {
         isInternalHashChange = true;
@@ -1145,7 +1095,7 @@
     }
 
     // ----------------------------------------------------
-    // タッチ＆ズーム＆画面左右タップで画像遷移処理
+    // タッチ＆ダブルタップズーム＆全画面・画像上タップ遷移
     // ----------------------------------------------------
     function applyTransform() {
       mainImgEl.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
@@ -1169,51 +1119,37 @@
       const stage = stageSingleEl;
 
       stage.addEventListener('touchstart', (e) => {
-        touchStartTime = Date.now();
-
         if (e.touches.length === 1) {
-          const now = Date.now();
-          const timeDiff = now - lastTapTime;
+          const touch = e.touches[0];
+          startX = touch.clientX;
+          startY = touch.clientY;
+          hasMoved = false;
 
-          if (timeDiff < 300 && timeDiff > 0) {
-            // ダブルタップ ズーム
-            e.preventDefault();
-            if (currentScale > 1) {
-              resetTransform();
-            } else {
-              currentScale = 2.5;
-              const touch = e.touches[0];
-              const rect = mainImgEl.getBoundingClientRect();
-              const offsetX = touch.clientX - (rect.left + rect.width / 2);
-              const offsetY = touch.clientY - (rect.top + rect.height / 2);
-              currentTranslateX = -offsetX * 1.5;
-              currentTranslateY = -offsetY * 1.5;
-              applyTransform();
-            }
-            lastTapTime = 0;
-            return;
+          if (currentScale > 1) {
+            isDragging = true;
+            dragStartX = touch.clientX - currentTranslateX;
+            dragStartY = touch.clientY - currentTranslateY;
           }
-          lastTapTime = now;
-
-          isDragging = true;
-          startX = e.touches[0].clientX - currentTranslateX;
-          startY = e.touches[0].clientY - currentTranslateY;
         } else if (e.touches.length === 2) {
           isDragging = false;
+          hasMoved = true;
           initialPinchDistance = getDistance(e.touches);
           initialScale = currentScale;
         }
       }, { passive: false });
 
       stage.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1 && isDragging) {
-          const deltaX = e.touches[0].clientX - startX;
-          const deltaY = e.touches[0].clientY - startY;
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY);
+          if (dist > 8) {
+            hasMoved = true;
+          }
 
-          if (currentScale > 1) {
+          if (currentScale > 1 && isDragging) {
             e.preventDefault();
-            currentTranslateX = deltaX;
-            currentTranslateY = deltaY;
+            currentTranslateX = touch.clientX - dragStartX;
+            currentTranslateY = touch.clientY - dragStartY;
             applyTransform();
           }
         } else if (e.touches.length === 2) {
@@ -1228,31 +1164,65 @@
       }, { passive: false });
 
       stage.addEventListener('touchend', (e) => {
-        const touchDuration = Date.now() - touchStartTime;
-
         if (e.touches.length === 0) {
-          if (isDragging && currentScale === 1) {
-            const endX = e.changedTouches[0].clientX;
-            const endY = e.changedTouches[0].clientY;
-            const diffX = endX - (startX + currentTranslateX);
-            const diffY = endY - (startY + currentTranslateY);
+          const touchEndX = e.changedTouches[0].clientX;
+          const touchEndY = e.changedTouches[0].clientY;
+          const moveDistX = touchEndX - startX;
+          const moveDistY = touchEndY - startY;
 
-            // シングルタップ判定 (移動がほぼ無く短いタップ)
-            if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10 && touchDuration < 300) {
-              if (Date.now() - lastTapTime > 250) {
-                // 画面右側タップ -> 次の画像へ、左側タップ -> 前の画像へ
-                if (endX > window.innerWidth / 2) {
-                  nextImg();
-                } else {
-                  prevImg();
-                }
+          // 画面上部ヘッダーボタン周りの誤判定防止
+          if (touchEndY < 60) {
+            isDragging = false;
+            return;
+          }
+
+          if (!hasMoved) {
+            const now = Date.now();
+            const timeSinceLastTap = now - lastTapTime;
+
+            if (timeSinceLastTap < 280 && timeSinceLastTap > 0) {
+              // ダブルタップ確定！ズーム処理
+              if (tapTimer) {
+                clearTimeout(tapTimer);
+                tapTimer = null;
               }
-            } else if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-              // フリックスワイプ
-              if (diffX < 0) nextImg();
+              lastTapTime = 0;
+
+              if (currentScale > 1) {
+                resetTransform();
+              } else {
+                currentScale = 2.5;
+                const rect = mainImgEl.getBoundingClientRect();
+                const offsetX = touchEndX - (rect.left + rect.width / 2);
+                const offsetY = touchEndY - (rect.top + rect.height / 2);
+                currentTranslateX = -offsetX * 1.5;
+                currentTranslateY = -offsetY * 1.5;
+                applyTransform();
+              }
+            } else {
+              // シングルタップ判定（ダブルタップ待機）
+              lastTapTime = now;
+              tapTimer = setTimeout(() => {
+                if (currentScale === 1) {
+                  // 1倍時：右半分タップで次へ、左半分タップで前へ（画像上でも画面全域でもOK）
+                  if (touchEndX > window.innerWidth / 2) {
+                    nextImg();
+                  } else {
+                    prevImg();
+                  }
+                } else {
+                  // 拡大中のタップはズームリセット
+                  resetTransform();
+                }
+                tapTimer = null;
+              }, 280);
+            }
+          } else if (currentScale === 1) {
+            // フリックスワイプ動作
+            if (Math.abs(moveDistX) > 40 && Math.abs(moveDistX) > Math.abs(moveDistY)) {
+              if (moveDistX < 0) nextImg();
               else prevImg();
-            } else if (diffY > 100 && Math.abs(diffY) > Math.abs(diffX)) {
-              // 下スワイプで閉じる
+            } else if (moveDistY > 90 && Math.abs(moveDistY) > Math.abs(moveDistX)) {
               closeViewer(true);
             }
           }
@@ -1260,10 +1230,10 @@
         }
       });
 
-      // デスクトップ環境用のクリック判定（右半分で次へ、左半分で前へ）
+      // PCデスクトップ環境用クリック判定
       stage.addEventListener('click', (e) => {
         if ('ontouchstart' in window) return;
-        if (e.target.closest('.arrow-btn') || e.target.closest('.btn-circle')) return;
+        if (e.target.closest('.btn-circle')) return;
 
         if (currentScale > 1) {
           resetTransform();
@@ -1273,6 +1243,19 @@
           } else {
             prevImg();
           }
+        }
+      });
+
+      // PCデスクトップ環境用ダブルクリック
+      stage.addEventListener('dblclick', (e) => {
+        if ('ontouchstart' in window) return;
+        if (e.target.closest('.btn-circle')) return;
+
+        if (currentScale > 1) {
+          resetTransform();
+        } else {
+          currentScale = 2.5;
+          applyTransform();
         }
       });
     }
