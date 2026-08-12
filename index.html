@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <title>Premium Fanbox Media Gallery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-surface: #111827;
+      --card-bg: rgba(31, 41, 55, 0.7);
+      --card-hover: rgba(55, 65, 81, 0.8);
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --accent-violet: #8b5cf6;
+      --accent-pink: #ec4899;
+      --accent-cyan: #06b6d4;
+      --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+      --accent-glow: rgba(139, 92, 246, 0.4);
+      --border-light: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(139, 92, 246, 0.5);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --glass-bg: rgba(17, 24, 39, 0.85);
+      --glass-blur: blur(20px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* 背景アンビエントグラデーション */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.25;
+    }
+    .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: var(--accent-violet); }
+    .blob-2 { bottom: -10%; right: -10%; width: 50vw; height: 50vw; background: var(--accent-pink); }
+
+    /* ヘッダー */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0.75rem 1.25rem;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .header-content {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      -webkit-text-fill-color: initial;
+      box-shadow: 0 4px 15px var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    .header-right-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ヘッダー畳み込みトグルボタン */
+    .header-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-light);
+      color: var(--text-primary);
+      padding: 0.45rem 0.75rem;
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .header-toggle-btn:active { scale: 0.95; }
+    .header-toggle-btn svg {
+      transition: transform 0.3s ease;
+    }
+    .header-collapsed .header-toggle-btn svg {
+      transform: rotate(180deg);
+    }
+
+    /* 作者＆お気に入りタブ */
+    .tab-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 3px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-light);
+      gap: 4px;
+      overflow-x: auto;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tab-group::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.45rem 0.85rem;
+      border-radius: 9px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--text-primary); }
+
+    .tab-btn.active {
+      background: var(--accent-gradient);
+      color: #ffffff;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    .tab-badge {
+      font-size: 0.7rem;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1px 6px;
+      border-radius: 999px;
+    }
+
+    /* ツールバー (検索・ソート・グリッド切替) */
+    .toolbar-container {
+      position: relative;
+      z-index: 10;
+      max-width: 1440px;
+      width: 100%;
+      margin: 1rem auto 0 auto;
+      padding: 0 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s ease;
+      max-height: 200px;
+      opacity: 1;
+      overflow: hidden;
+    }
+
+    /* ヘッダー折りたたみ時の挙動 */
+    .header-collapsed .header-content .tab-group,
+    .header-collapsed .toolbar-container {
+      max-height: 0 !important;
+      opacity: 0 !important;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      pointer-events: none;
+    }
+
+    .search-wrapper {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--glass-bg);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 0.55rem 1rem 0.55rem 2.4rem;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-violet);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .search-icon-svg {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      pointer-events: none;
+    }
+
+    .action-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .custom-select {
+      background: var(--glass-bg);
+      border: 1px solid var(--border-light);
+      color: var(--text-primary);
+      padding: 0.55rem 0.85rem;
+      border-radius: var(--radius-md);
+      font-size: 0.82rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .icon-toggle-btn {
+      background: var(--glass-bg);
+      border: 1px solid var(--border-light);
+      color: var(--text-secondary);
+      padding: 0.55rem;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .icon-toggle-btn:hover, .icon-toggle-btn.active {
+      color: var(--text-primary);
+      border-color: var(--accent-violet);
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    /* メイン作品グリッド */
+    main {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      max-width: 1440px;
+      width: 100%;
+      margin: 1.25rem auto;
+      padding: 0 1.25rem;
+    }
+
+    .grid-size-normal {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .grid-size-large {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .grid-size-compact {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.75rem;
+    }
+
+    /* 作品カード */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-light);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-active);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 15px var(--accent-glow);
+    }
+
+    .card-media {
+      position: relative;
+      width: 100%;
+      padding-top: 135%;
+      background: #05070d;
+      overflow: hidden;
+    }
+
+    .card-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .card:hover .card-img {
+      transform: scale(1.06);
+    }
+
+    /* ブックマーク（お気に入り）ボタン */
+    .fav-btn {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 5;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .fav-btn:hover { scale: 1.1; }
+    .fav-btn.is-fav {
+      background: #ef4444;
+      border-color: #ef4444;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+    }
+
+    .count-tag {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 5;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-details {
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex: 1;
+    }
+
+    .card-title-text {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.4;
+    }
+
+    .card-subinfo {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .empty-box {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--text-secondary);
+      grid-column: 1 / -1;
+    }
+
+    /* ========================================================
+       ギャラリーフルビューア (モーダル) - モバイル最適化
+       ======================================================== */
+    .viewer-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(3, 5, 10, 0.98);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      touch-action: none;
+    }
+
+    .viewer-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .viewer-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: linear-gradient(to bottom, rgba(10, 15, 25, 0.92) 0%, rgba(10, 15, 25, 0.6) 70%, transparent 100%);
+      backdrop-filter: blur(10px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .viewer-work-info {
+      max-width: 60%;
+    }
+
+    .viewer-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #fff;
+    }
+
+    .viewer-author {
+      font-size: 0.75rem;
+      color: var(--accent-pink);
+    }
+
+    .viewer-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-circle {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-primary);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-circle:hover, .btn-circle:active { background: rgba(255, 255, 255, 0.25); }
+    .btn-circle.active { background: var(--accent-violet); border-color: var(--accent-violet); }
+
+    /* ビューアステージ */
+    .viewer-stage {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+    }
+
+    .stage-single {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    /* メイン画像 rendering */
+    .main-render-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+      border-radius: 4px;
+      will-change: transform;
+      transform-origin: center center;
+      transition: transform 0.1s ease-out;
+      cursor: grab;
+    }
+
+    .arrow-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(17, 24, 39, 0.65);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-light);
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      z-index: 20;
+    }
+
+    .arrow-btn:hover, .arrow-btn:active {
+      background: var(--accent-violet);
+      scale: 1.08;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .arrow-btn.left { left: 0.75rem; }
+    .arrow-btn.right { right: 0.75rem; }
+
+    /* モーダル内一覧表示 */
+    .stage-grid {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      padding: 4rem 1rem 5rem 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.75rem;
+      align-content: start;
+      touch-action: pan-y;
+    }
+
+    .modal-grid-item {
+      aspect-ratio: 3/4;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      cursor: pointer;
+      position: relative;
+      background: #05070d;
+    }
+
+    .modal-grid-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .modal-grid-item.active {
+      border-color: var(--accent-violet);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    /* サムネイルリール & フッター */
+    .viewer-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      background: linear-gradient(to top, rgba(10, 15, 25, 0.95) 0%, rgba(10, 15, 25, 0.7) 70%, transparent 100%);
+      backdrop-filter: blur(10px);
+      padding: 0.5rem 0.75rem 0.75rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .reel-track {
+      display: flex;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding: 2px 0;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .reel-track::-webkit-scrollbar { display: none; }
+
+    .reel-thumb {
+      flex: 0 0 52px;
+      height: 70px;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      opacity: 0.45;
+      transition: all 0.2s;
+    }
+
+    .reel-thumb.active {
+      opacity: 1;
+      border-color: var(--accent-violet);
+      transform: scale(1.05);
+    }
+
+    .reel-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .counter-badge {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* フォーカスモード (画面タップでUI隠し) */
+    .viewer-overlay.ui-hidden .viewer-header {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-20px);
+    }
+    .viewer-overlay.ui-hidden .viewer-footer {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+    }
+    .viewer-overlay.ui-hidden .arrow-btn {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* スマホ画面向けのレスポンシブ微調整 */
+    @media (max-width: 768px) {
+      header {
+        padding: 0.6rem 0.85rem;
+      }
+      .brand span {
+        font-size: 0.95rem;
+      }
+      .brand-icon {
+        width: 28px;
+        height: 28px;
+      }
+      .toolbar-container {
+        padding: 0 0.85rem;
+        gap: 0.5rem;
+      }
+      .search-wrapper {
+        min-width: 100%;
+      }
+      .action-controls {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .custom-select {
+        flex: 1;
+      }
+      .arrow-btn {
+        width: 38px;
+        height: 38px;
+      }
+      .arrow-btn.left { left: 0.4rem; }
+      .arrow-btn.right { right: 0.4rem; }
+      
+      .viewer-header {
+        padding: 0.6rem 0.75rem;
+      }
+      .viewer-title {
+        font-size: 0.85rem;
+      }
+      .btn-circle {
+        width: 34px;
+        height: 34px;
+      }
+      .btn-circle svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
+
+  <header id="mainHeader">
+    <div class="header-content">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <span>FANBOX MEDIA GALLERY</span>
+      </div>
+
+      <div class="header-right-controls">
+        <div class="tab-group" id="tabGroup">
+          <!-- タブボタンはJS動的生成 -->
+        </div>
+
+        <!-- スマホ用ヘッダー畳み込み切り替えボタン -->
+        <button class="header-toggle-btn" id="headerToggleBtn" title="ヘッダー開閉">
+          <span id="headerToggleText">たたむ</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar-container" id="toolbarContainer">
+    <div class="search-wrapper">
+      <svg class="search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" class="search-input" placeholder="作品名・IDで検索...">
+    </div>
+
+    <div class="action-controls">
+      <select id="sortSelect" class="custom-select">
+        <option value="id-desc">ID順 (新着)</option>
+        <option value="id-asc">ID順 (古い順)</option>
+        <option value="title-asc">タイトル順</option>
+        <option value="images-desc">枚数が多い順</option>
+      </select>
+
+      <!-- カードサイズ切り替え -->
+      <button class="icon-toggle-btn" id="btnGridSize" title="表示サイズ切替">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      </button>
+
+      <!-- ランダム閲覧ボタン -->
+      <button class="icon-toggle-btn" id="btnRandom" title="ランダム作品を開く🎲">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <main>
+    <div class="grid-size-normal" id="mainGrid">
+      <!-- 作品カード -->
+    </div>
+  </main>
+
+  <!-- 全画面閲覧モーダル -->
+  <div class="viewer-overlay" id="viewerOverlay">
+    <div class="viewer-header">
+      <div class="viewer-work-info">
+        <div class="viewer-title" id="vTitle">作品タイトル</div>
+        <div class="viewer-author" id="vAuthor">作者名</div>
+      </div>
+
+      <div class="viewer-actions">
+        <button class="btn-circle" id="btnFavModal" title="お気に入り追加">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+
+        <button class="btn-circle" id="btnSlideshow" title="スライドショー再生/停止 (Space)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+
+        <button class="btn-circle active" id="btnModeSingle" title="1枚表示">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        </button>
+
+        <button class="btn-circle" id="btnModeGrid" title="一覧表示">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </button>
+
+        <button class="btn-circle" id="btnCloseViewer" title="閉じる (Esc)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="viewer-stage" id="viewerStage">
+      <div class="stage-single" id="stageSingle">
+        <button class="arrow-btn left" id="btnPrev">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+
+        <img src="" alt="" class="main-render-img" id="mainImg">
+
+        <button class="arrow-btn right" id="btnNext">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <div class="stage-grid" id="stageGrid" style="display: none;"></div>
+    </div>
+
+    <div class="viewer-footer" id="vFooter">
+      <div class="counter-badge" id="vCounter">
+        <span id="counterText">1 / 10</span>
+      </div>
+      <div class="reel-track" id="reelTrack"></div>
+    </div>
+  </div>
+
+  <script src="gallery_data.js"></script>
+  <script>
+    // State
+    let currentTab = 0; // 0: Author1, 1: Author2, 999: Favs
+    let activeWorks = [];
+    let currentWork = null;
+    let imgIdx = 0;
+    let viewMode = 'single';
+    let isSlideshow = false;
+    let slideshowTimer = null;
+    let favorites = JSON.parse(localStorage.getItem('fanbox_favs') || '[]');
+    let gridSizeState = 'normal'; // normal, large, compact
+    let isHeaderCollapsed = false;
+    let isUiHidden = false;
+
+    // DOM
+    const mainHeaderEl = document.getElementById('mainHeader');
+    const headerToggleBtn = document.getElementById('headerToggleBtn');
+    const headerToggleText = document.getElementById('headerToggleText');
+    const tabGroupEl = document.getElementById('tabGroup');
+    const searchInputEl = document.getElementById('searchInput');
+    const sortSelectEl = document.getElementById('sortSelect');
+    const mainGridEl = document.getElementById('mainGrid');
+    const btnGridSizeEl = document.getElementById('btnGridSize');
+    const btnRandomEl = document.getElementById('btnRandom');
+
+    const overlayEl = document.getElementById('viewerOverlay');
+    const vTitleEl = document.getElementById('vTitle');
+    const vAuthorEl = document.getElementById('vAuthor');
+    const btnCloseViewer = document.getElementById('btnCloseViewer');
+    const btnModeSingle = document.getElementById('btnModeSingle');
+    const btnModeGrid = document.getElementById('btnModeGrid');
+    const btnSlideshow = document.getElementById('btnSlideshow');
+    const btnFavModal = document.getElementById('btnFavModal');
+
+    const stageSingleEl = document.getElementById('stageSingle');
+    const stageGridEl = document.getElementById('stageGrid');
+    const mainImgEl = document.getElementById('mainImg');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const counterTextEl = document.getElementById('counterText');
+    const reelTrackEl = document.getElementById('reelTrack');
+    const vFooterEl = document.getElementById('vFooter');
+
+    // ----------------------------------------------------
+    // スマホ向け タッチ & ズーム State
+    // ----------------------------------------------------
+    let currentScale = 1;
+    let currentTranslateX = 0;
+    let currentTranslateY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialPinchDistance = 0;
+    let initialScale = 1;
+    let lastTapTime = 0;
+    let touchStartTime = 0;
+    let isSwiping = false;
+
+    function init() {
+      if (typeof GALLERY_DATA === 'undefined') return;
+
+      renderTabs();
+      switchTab(0);
+
+      // Listeners
+      searchInputEl.addEventListener('input', updateGallery);
+      sortSelectEl.addEventListener('change', updateGallery);
+      btnGridSizeEl.addEventListener('click', toggleGridSize);
+      btnRandomEl.addEventListener('click', openRandomWork);
+
+      headerToggleBtn.addEventListener('click', toggleHeader);
+
+      btnCloseViewer.addEventListener('click', closeViewer);
+      btnModeSingle.addEventListener('click', () => setMode('single'));
+      btnModeGrid.addEventListener('click', () => setMode('grid'));
+      btnSlideshow.addEventListener('click', toggleSlideshow);
+      btnFavModal.addEventListener('click', toggleFavCurrentWork);
+
+      btnPrev.addEventListener('click', (e) => { e.stopPropagation(); prevImg(); });
+      btnNext.addEventListener('click', (e) => { e.stopPropagation(); nextImg(); });
+
+      // キーボード設定
+      window.addEventListener('keydown', (e) => {
+        if (!overlayEl.classList.contains('active')) return;
+        if (e.key === 'Escape') closeViewer();
+        if (e.key === 'Space' || e.code === 'Space') {
+          e.preventDefault();
+          toggleSlideshow();
+        }
+        if (viewMode === 'single') {
+          if (e.key === 'ArrowLeft') prevImg();
+          if (e.key === 'ArrowRight') nextImg();
+        }
+      });
+
+      // タッチ / マウスイベント初期化
+      initTouchEvents();
+    }
+
+    // ヘッダートグル
+    function toggleHeader() {
+      isHeaderCollapsed = !isHeaderCollapsed;
+      document.body.classList.toggle('header-collapsed', isHeaderCollapsed);
+      headerToggleText.textContent = isHeaderCollapsed ? '開く' : 'たたむ';
+    }
+
+    function renderTabs() {
+      let html = GALLERY_DATA.map((author, i) => `
+        <button class="tab-btn ${i === 0 ? 'active' : ''}" onclick="switchTab(${i})">
+          <span>${author.name}</span>
+          <span class="tab-badge">${author.works.length}</span>
+        </button>
+      `).join('');
+
+      html += `
+        <button class="tab-btn" onclick="switchTab(999)" id="favTab">
+          <span>♥ お気に入り</span>
+          <span class="tab-badge" id="favCount">${favorites.length}</span>
+        </button>
+      `;
+
+      tabGroupEl.innerHTML = html;
+    }
+
+    function switchTab(index) {
+      currentTab = index;
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (index === 999 && i === GALLERY_DATA.length) || i === index);
+      });
+      updateGallery();
+    }
+
+    function updateGallery() {
+      let works = [];
+      if (currentTab === 999) {
+        GALLERY_DATA.forEach(author => {
+          author.works.forEach(work => {
+            if (favorites.includes(work.folderName)) {
+              works.push({ ...work, authorName: author.name });
+            }
+          });
+        });
+      } else {
+        const author = GALLERY_DATA[currentTab];
+        works = author.works.map(w => ({ ...w, authorName: author.name }));
+      }
+
+      const q = searchInputEl.value.trim().toLowerCase();
+      if (q) {
+        works = works.filter(w => w.title.toLowerCase().includes(q) || w.id.includes(q));
+      }
+
+      const sortType = sortSelectEl.value;
+      works.sort((a, b) => {
+        if (sortType === 'id-desc') return (b.id || 0) - (a.id || 0);
+        if (sortType === 'id-asc') return (a.id || 0) - (b.id || 0);
+        if (sortType === 'title-asc') return a.title.localeCompare(b.title, 'ja');
+        if (sortType === 'images-desc') return b.images.length - a.images.length;
+        return 0;
+      });
+
+      activeWorks = works;
+      renderGrid();
+    }
+
+    function renderGrid() {
+      if (activeWorks.length === 0) {
+        mainGridEl.innerHTML = `
+          <div class="empty-box">
+            <p>作品が見つかりませんでした</p>
+          </div>`;
+        return;
+      }
+
+      mainGridEl.innerHTML = activeWorks.map((work, idx) => {
+        const isFav = favorites.includes(work.folderName);
+        return `
+          <div class="card" onclick="openViewer(${idx})">
+            <button class="fav-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFav(event, '${work.folderName}')">
+              ♥
+            </button>
+            <div class="card-media">
+              <img class="card-img" src="${work.thumbnail}" loading="lazy" alt="">
+              <div class="count-tag">${work.images.length} 枚</div>
+            </div>
+            <div class="card-details">
+              <div class="card-title-text">${escapeHtml(work.title)}</div>
+              <div class="card-subinfo">
+                <span>${work.authorName}</span>
+                <span>ID: ${work.id || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleFav(e, folderName) {
+      e.stopPropagation();
+      if (favorites.includes(folderName)) {
+        favorites = favorites.filter(f => f !== folderName);
+      } else {
+        favorites.push(folderName);
+      }
+      localStorage.setItem('fanbox_favs', JSON.stringify(favorites));
+      document.getElementById('favCount').textContent = favorites.length;
+      updateGallery();
+    }
+
+    function toggleFavCurrentWork() {
+      if (!currentWork) return;
+      toggleFav({ stopPropagation: () => {} }, currentWork.folderName);
+      btnFavModal.classList.toggle('active', favorites.includes(currentWork.folderName));
+    }
+
+    function toggleGridSize() {
+      if (gridSizeState === 'normal') {
+        gridSizeState = 'large';
+        mainGridEl.className = 'grid-size-large';
+      } else if (gridSizeState === 'large') {
+        gridSizeState = 'compact';
+        mainGridEl.className = 'grid-size-compact';
+      } else {
+        gridSizeState = 'normal';
+        mainGridEl.className = 'grid-size-normal';
+      }
+    }
+
+    function openRandomWork() {
+      if (activeWorks.length === 0) return;
+      const randIdx = Math.floor(Math.random() * activeWorks.length);
+      openViewer(randIdx);
+    }
+
+    function openViewer(idx) {
+      currentWork = activeWorks[idx];
+      imgIdx = 0;
+
+      vTitleEl.textContent = currentWork.title;
+      vAuthorEl.textContent = currentWork.authorName;
+      btnFavModal.classList.toggle('active', favorites.includes(currentWork.folderName));
+
+      setMode('single');
+      renderReel();
+      overlayEl.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeViewer() {
+      overlayEl.classList.remove('active');
+      document.body.style.overflow = '';
+      stopSlideshow();
+      resetTransform();
+    }
+
+    function setMode(mode) {
+      viewMode = mode;
+      btnModeSingle.classList.toggle('active', mode === 'single');
+      btnModeGrid.classList.toggle('active', mode === 'grid');
+
+      if (mode === 'single') {
+        stageSingleEl.style.display = 'flex';
+        stageGridEl.style.display = 'none';
+        vFooterEl.style.display = 'flex';
+        updateSingleView();
+      } else {
+        stageSingleEl.style.display = 'none';
+        stageGridEl.style.display = 'grid';
+        vFooterEl.style.display = 'none';
+        renderGridView();
+      }
+    }
+
+    function updateSingleView() {
+      if (!currentWork) return;
+      resetTransform();
+      mainImgEl.src = `${currentWork.path}/${currentWork.images[imgIdx]}`;
+      counterTextEl.textContent = `${imgIdx + 1} / ${currentWork.images.length}`;
+
+      document.querySelectorAll('.reel-thumb').forEach((item, i) => {
+        const active = i === imgIdx;
+        item.classList.toggle('active', active);
+        if (active) {
+          item.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+      });
+    }
+
+    function renderGridView() {
+      if (!currentWork) return;
+      stageGridEl.innerHTML = currentWork.images.map((img, i) => `
+        <div class="modal-grid-item ${i === imgIdx ? 'active' : ''}" onclick="selectImgFromGrid(${i})">
+          <img src="${currentWork.path}/${img}" loading="lazy" alt="">
+        </div>
+      `).join('');
+    }
+
+    function selectImgFromGrid(i) {
+      imgIdx = i;
+      setMode('single');
+    }
+
+    function renderReel() {
+      if (!currentWork) return;
+      reelTrackEl.innerHTML = currentWork.images.map((img, i) => `
+        <div class="reel-thumb ${i === imgIdx ? 'active' : ''}" onclick="jumpImg(${i})">
+          <img src="${currentWork.path}/${img}" loading="lazy" alt="">
+        </div>
+      `).join('');
+    }
+
+    function jumpImg(i) {
+      imgIdx = i;
+      updateSingleView();
+    }
+
+    function prevImg() {
+      if (!currentWork) return;
+      imgIdx = (imgIdx - 1 + currentWork.images.length) % currentWork.images.length;
+      updateSingleView();
+    }
+
+    function nextImg() {
+      if (!currentWork) return;
+      imgIdx = (imgIdx + 1) % currentWork.images.length;
+      updateSingleView();
+    }
+
+    function toggleSlideshow() {
+      if (isSlideshow) {
+        stopSlideshow();
+      } else {
+        startSlideshow();
+      }
+    }
+
+    function startSlideshow() {
+      isSlideshow = true;
+      btnSlideshow.classList.add('active');
+      slideshowTimer = setInterval(nextImg, 3500);
+    }
+
+    function stopSlideshow() {
+      isSlideshow = false;
+      btnSlideshow.classList.remove('active');
+      if (slideshowTimer) clearInterval(slideshowTimer);
+    }
+
+    function escapeHtml(str) {
+      return str ? str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : '';
+    }
+
+    // ----------------------------------------------------
+    // タッチ＆ズーム＆スワイプ＆UIトグル処理
+    // ----------------------------------------------------
+    function applyTransform() {
+      mainImgEl.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
+    }
+
+    function resetTransform() {
+      currentScale = 1;
+      currentTranslateX = 0;
+      currentTranslateY = 0;
+      applyTransform();
+    }
+
+    function toggleViewerUi() {
+      isUiHidden = !isUiHidden;
+      overlayEl.classList.toggle('ui-hidden', isUiHidden);
+    }
+
+    function getDistance(touches) {
+      return Math.hypot(
+        touches[0].clientX - touches[1].clientX,
+        touches[0].clientY - touches[1].clientY
+      );
+    }
+
+    function initTouchEvents() {
+      const stage = stageSingleEl;
+
+      // 1. タップ・ダブルタップ & UIトグル
+      stage.addEventListener('touchstart', (e) => {
+        touchStartTime = Date.now();
+
+        if (e.touches.length === 1) {
+          const now = Date.now();
+          const timeDiff = now - lastTapTime;
+
+          if (timeDiff < 300 && timeDiff > 0) {
+            // ダブルタップ ズーム
+            e.preventDefault();
+            if (currentScale > 1) {
+              resetTransform();
+            } else {
+              currentScale = 2.5;
+              const touch = e.touches[0];
+              const rect = mainImgEl.getBoundingClientRect();
+              const offsetX = touch.clientX - (rect.left + rect.width / 2);
+              const offsetY = touch.clientY - (rect.top + rect.height / 2);
+              currentTranslateX = -offsetX * 1.5;
+              currentTranslateY = -offsetY * 1.5;
+              applyTransform();
+            }
+            lastTapTime = 0;
+            return;
+          }
+          lastTapTime = now;
+
+          // 1本指 ドラッグ / スワイプ開始
+          isDragging = true;
+          startX = e.touches[0].clientX - currentTranslateX;
+          startY = e.touches[0].clientY - currentTranslateY;
+        } else if (e.touches.length === 2) {
+          // ピンチズーム開始
+          isDragging = false;
+          initialPinchDistance = getDistance(e.touches);
+          initialScale = currentScale;
+        }
+      }, { passive: false });
+
+      stage.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && isDragging) {
+          const deltaX = e.touches[0].clientX - startX;
+          const deltaY = e.touches[0].clientY - startY;
+
+          if (currentScale > 1) {
+            // 拡大中のパン（移動）
+            e.preventDefault();
+            currentTranslateX = deltaX;
+            currentTranslateY = deltaY;
+            applyTransform();
+          }
+        } else if (e.touches.length === 2) {
+          // ピンチズーム中
+          e.preventDefault();
+          const currentDistance = getDistance(e.touches);
+          if (initialPinchDistance > 0) {
+            const scaleFactor = currentDistance / initialPinchDistance;
+            currentScale = Math.min(Math.max(initialScale * scaleFactor, 1), 4);
+            applyTransform();
+          }
+        }
+      }, { passive: false });
+
+      stage.addEventListener('touchend', (e) => {
+        const touchDuration = Date.now() - touchStartTime;
+
+        if (e.touches.length === 0) {
+          if (isDragging && currentScale === 1) {
+            // スワイプ移動 or 下スワイプ閉じ
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const diffX = endX - (startX + currentTranslateX);
+            const diffY = endY - (startY + currentTranslateY);
+
+            // シングルタップ判定 (移動距離が小さく、短いタップ)
+            if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10 && touchDuration < 250) {
+              // 画像以外の部分または短タップでUI切り替え
+              if (Date.now() - lastTapTime > 250) {
+                toggleViewerUi();
+              }
+            } else if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY)) {
+              // 左右スワイプ
+              if (diffX < 0) nextImg();
+              else prevImg();
+            } else if (diffY > 100 && Math.abs(diffY) > Math.abs(diffX)) {
+              // 下スワイプで閉じる
+              closeViewer();
+            }
+          }
+          isDragging = false;
+        }
+      });
+
+      // マウスクリックでの拡大/UI切替互換
+      mainImgEl.addEventListener('click', (e) => {
+        if ('ontouchstart' in window) return; // タッチデバイスではスキップ
+        if (currentScale > 1) {
+          resetTransform();
+        } else {
+          currentScale = 2;
+          applyTransform();
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Sensitive data & images (large assets)
+cookies.json
+fanbox_images_*/
+debug_extracted_data.json
+hallmark/
+
+# Cloudflare & Node
+.wrangler/
+node_modules/
+
+# OS metadata
+.DS_Store
+Thumbs.db
